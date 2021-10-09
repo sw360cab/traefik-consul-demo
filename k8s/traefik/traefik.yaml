@@ -1,0 +1,111 @@
+apiVersion: "v1"
+kind: Namespace
+metadata:
+  name: traefik-consul
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: traefik-ingress-controller
+  namespace: traefik-consul
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: traefik
+  namespace: traefik-consul
+  labels:
+    app: traefik
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traefik
+  template:
+    metadata:
+      labels:
+        app: traefik
+    spec:
+      serviceAccountName: traefik-ingress-controller
+      containers:
+        - name: traefik
+          image: traefik:v2.5
+          args:
+            - --api.insecure
+            - --accesslog
+            - --log.level=DEBUG
+            - --entrypoints.web.address=:80
+            - --entrypoints.websecure.address=:443
+            ## TLS CHALLENGE
+            - --certificatesresolvers.autoresolver.acme.tlschallenge
+            ## LetsEncrypt definitions
+            - --certificatesresolvers.autoresolver.acme.email=foo@you.com
+            - --certificatesresolvers.autoresolver.acme.storage=acme.json
+            ## Please note that this is the staging Let's Encrypt server.
+            ## Once you get things working, you should remove that whole line altogether.
+            - --certificatesresolvers.autoresolver.acme.caserver=https://acme-staging-v02.api.letsencrypt.org/directory
+            # Consul config: 
+            # Enable Traefik to use Consul Connect:
+            - "--providers.consulcatalog.connectAware=true" 
+            # Traefik routes should only be created for services with explicit `traefik.enable=true` service-tags:
+            - "--providers.consulcatalog.exposedByDefault=false"
+            # For routes that are exposed (`traefik.enable=true`) use Consul Connect by default:
+            - "--providers.consulcatalog.connectByDefault=true"
+            # Rename the service inside Consul: `traefik-system-ingress`
+            - "--providers.consulcatalog.servicename=traefik-system-ingress"
+            # Connect Traefik to the Consul service:
+            - "--providers.consulcatalog.endpoint.address=consul-server.consul-system.svc.cluster.local:8501"
+            - "--providers.consulcatalog.endpoint.scheme=https"
+            - "--providers.consulcatalog.endpoint.tls.ca=/certs/consul-ca/tls.crt"
+            - "--providers.consulcatalog.endpoint.tls.insecureskipverify=true"
+          ports:
+            - name: web
+              containerPort: 80
+            - name: websecure
+              containerPort: 443
+            - name: admin
+              containerPort: 8080
+          resources:
+            limits:
+              cpu: "2"
+              memory: "500Mi"
+          volumeMounts:
+            - name: consul-ca-cert
+              mountPath: "/certs/consul-ca/"
+              readOnly: true
+      volumes:
+      - name: consul-ca-cert
+        secret:
+          secretName: consul-ca-cert
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: traefik
+  namespace: traefik-consul
+  annotations: 
+    # Register the service in Consul as `traefik-system-ingress`:
+    consul.hashicorp.com/service-sync: "true"
+    consul.hashicorp.com/service-name: "traefik-system-ingress"
+spec:
+  selector:
+    app: traefik
+  ports:
+  - name: web
+    protocol: TCP
+    nodePort: 30080
+    port: 80
+    targetPort: 80
+  - name: admin
+    protocol: TCP
+    nodePort: 30808
+    port: 8080
+    targetPort: 8080
+  - name: webtls
+    protocol: TCP
+    nodePort: 30443
+    port: 443
+    targetPort: 443
+  type: NodePort
+  # externalIPs:
+  #   - 147.75.87.125 # Node1-IP
