@@ -1,6 +1,6 @@
 # Traefik 2.5 - What a Mesh&excl;
 
-`Disclaimer`: This post is freely inspired by an Official Traefik Labs blog [post](https://traefik.io/blog/integrating-consul-connect-service-mesh-with-traefik-2-5/).
+**Disclaimer**: This post is freely inspired by an Official Traefik Labs blog [post](https://traefik.io/blog/integrating-consul-connect-service-mesh-with-traefik-2-5/).
 I took some part and adapted to achieve a simpler working example (in my humble opinion).
 
 Few weeks ago Traefik Labs announced the new release of Traefik Proxy, now at version 2.5.
@@ -404,7 +404,7 @@ annotations:
 ```
 
 Since this topic it's outside of the scope of this post, for sake of simplicity I left apart the TLS configuration.
-I advise you to carefully read the Traefik Proxy, [User Guide](https://doc.traefik.io/traefik/user-guides/crd-acme/) section to attempt a fully TLS configuration.
+I advise you to carefully read the Traefik Proxy docs to attempt a fully TLS configuration; there is a detailed User Guide section for [Kubernetes & Let's Encrypt](https://doc.traefik.io/traefik/user-guides/crd-acme/).
 Moreover the whole process would be much simpler if you own a domain that is compliant with the [dnsChallenge](https://doc.traefik.io/traefik/https/acme/#dnschallenge).
 
 ### Playing with Consul Intentions
